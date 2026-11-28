@@ -1,0 +1,16 @@
+
+Concurrence : 1
+Latence totale p50 : 9.553 s
+Latence totale p95 : 28.618 s
+TTFT p50 : 8.593 s
+TTFT p95 : 10.396 s
+Débit : 1.37 tokens/s
+ITL moyen : 0.2690 s/token
+
+Concurrence : 4
+Latence totale p50 : 87.793 s
+Latence totale p95 : 110.200 s
+TTFT p50 : 97.102 s
+TTFT p95 : 109.751 s
+Débit : 0.72 tokens/s
+ITL moyen : 0.2663 s/token
