@@ -1,0 +1,7 @@
+metric,bronze,silver
+customers_email_completeness,1.0,1.0
+orders_id_uniqueness,0.97,1.0
+orders_customer_coherence,0.99,1.0
+customers_validity,0.62,1.0
+orders_amount_accuracy,1.0,1.0
+orders_freshness,1.0,1.0
