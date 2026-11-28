@@ -50,3 +50,74 @@ Trois protections ont été ajoutées et testées :
 | Client injecté, protections activées | 11/11 (100 %) |
 
 Après protection, les noms injectés ne sont plus présents dans assistant/index.json, la question sur la fermeture reçoit « Je ne sais pas » et l'évaluation passe. Ce résultat porte sur seulement 11 questions et ne prouve pas que le modèle résistera à toutes les variantes d'injection ; les protections réduisent le risque sans le supprimer.
+
+## Assistant IA — risques, exploitation et recommandation
+
+### Risques et remédiations
+
+| Priorité | Risque | Impact | Remédiation |
+|---|---|---|---|
+| P0 | Prompt injection indirecte dans un nom ou un autre champ indexé | Le modèle peut suivre une consigne cachée et inventer des informations, comme « boutique fermée » ou « CA à 0 € » pendant le test. | N'indexer que les champs nécessaires, pseudonymiser les clients, traiter le contexte comme donnée non fiable et tester régulièrement des injections dans les evals. |
+| P1 | Hallucination ou réponse numérique incorrecte | Une décision commerciale peut être prise à partir d'un chiffre erroné ; avant la récupération ciblée par date, le modèle confondait les commandes du 14 novembre (4) avec celles du meilleur jour (7). | Afficher les chunks sources, calculer les agrégats en SQL, garder une évaluation de non-régression et refuser si aucun passage pertinent n'est trouvé. |
+| P1 | Fuite de données personnelles vers un fournisseur cloud | Les noms ou achats des clients pourraient quitter l'infrastructure de la boutique. | Garder Ollama sur une infrastructure contrôlée ou anonymiser les données avant tout appel externe ; ne jamais envoyer de données personnelles sans validation et base légale. |
+| P1 | Données fausses ou mal agrégées en amont | Le RAG restitue avec assurance des chiffres faux, car il ne corrige pas la source. | Valider les données et les règles de déduplication avant le chargement Gold, surveiller les contrôles qualité et bloquer l'indexation lorsque ces contrôles échouent. |
+| P2 | Contrôle de sortie numérique incomplet | La vérification actuelle accepte un nombre s'il existe n'importe où dans les chunks, sans prouver qu'il correspond au bon fait ; elle peut donc laisser passer une confusion entre chiffres présents. | Lier les nombres de la réponse au chunk et au champ demandé, ou répondre directement à partir des agrégats SQL pour les questions numériques critiques. |
+
+### Mini-runbook
+
+**L'assistant est lent**
+
+1. Reproduire et mesurer avec :
+```
+uv run --no-project --with numpy --with openai python assistant/bench.py
+```
+
+2. Vérifier la saturation et l'état du pod avec kubectl -n ai get pods.
+
+3. Le bench observé donne un TTFT p95 de 10,396 s à une requête, mais de 109,751 s avec quatre requêtes simultanées : réduire la concurrence, puis vérifier CPU/mémoire dans [deployment.yaml](./k8s/ai/deployment.yaml). Ne pas ajouter de limite CPU arbitraire, car le throttling dégrade fortement le débit.
+
+**L'assistant répond n'importe quoi**
+
+1. Rejouer la question avec :
+```
+uv run --no-project --with numpy --with openai python assistant/ask.py "La question"
+``` 
+Vérifier les Chunks utilisés.
+
+2. Si les passages sont absents ou obsolètes, reconstruire l'index : 
+```
+uv run --no-project --with duckdb --with numpy --with openai python assistant/index.py
+```
+
+3. Vérifier les valeurs sources dans warehouse.duckdb.
+
+4. Si l'injection est suspectée, vérifier que les champs indexés ne contiennent pas de consignes ou de données personnelles.
+
+**Le pod redémarre en boucle**
+
+1. Identifier le pod et son état avec :
+```
+kubectl -n ai get pods
+```
+
+2. Examiner événements, probes et ressources avec :
+```
+kubectl -n ai describe pod -l app=ollama
+```
+
+3. Lire les logs courants et ceux du conteneur précédent : 
+```kubectl -n ai logs deploy/ollama -c ollama --tail=100
+kubectl -n ai logs deploy/ollama -c ollama --previous --tail=100
+```
+
+4. Corriger le fichier manifeste (notamment ressources et readiness probe), appliquer avec 
+```
+kubectl apply -k k8s/ai
+```
+Si le nœud manque de CPU ou de mémoire, augmenter les ressources Minikube avant de relancer.
+
+### Recommandation
+
+Pour cette boutique, je recommande Ollama sur une machine locale ou dédiée suffisamment dimensionnée, avec concurrence limitée, plutôt qu'une API cloud envoyant des données clients à l'extérieur : la confidentialité est mieux respectée avec l'hébergement local. Sur ma machine CPU, les performances sont toutefois insuffisantes pour une charge parallèle (TTFT p95 de 109,751 s à quatre requêtes), il faut donc dimensionner l'hôte et imposer une file d'attente ou un faible niveau de concurrence. Les evals sont encourageantes (10/10 sur 10 questions avant injection, 11/11 après protections sur le jeu modifié), mais le petit jeu de questions / le nombre de données au départ ne garantissent pas la fiabilité en production.
+
+L'API cloud coûterait peu pour le volume simulé (environ 0,013 $ pour 20 questions selon l'estimation précédente), mais le coût bas ne compense pas le risque de divulgation des données sans anonymisation et validation. 
