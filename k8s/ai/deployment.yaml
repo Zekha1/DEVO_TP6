@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: ai
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate        # le PVC est ReadWriteOnce : l'ancien pod doit s'arrêter avant que le nouveau le monte
+  selector:
+    matchLabels: {app: ollama}
+  template:
+    metadata:
+      labels: {app: ollama}
+    spec:
+      # Télécharge les modèles avant le démarrage du serveur, seulement s'ils ne sont pas déjà sur le volume
+      initContainers:
+        - name: pull-models
+          image: ollama/ollama:0.12.6
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ollama serve &
+              until ollama list >/dev/null 2>&1; do sleep 1; done
+              for m in qwen2.5:0.5b all-minilm; do
+                ollama list | grep -q "^$m" && echo "$m already present" || ollama pull "$m"
+              done
+          volumeMounts:
+            - {name: models, mountPath: /root/.ollama}
+      containers:
+        - name: ollama
+          image: ollama/ollama:0.12.6
+          ports:
+            - {name: http, containerPort: 11434}
+          # TODO resources : requests cpu "2" et memory 2Gi ; limits memory 3Gi (pas de limite CPU, voir l'expérience 2)
+          resources:
+            requests:
+              cpu: "2"
+              memory: 2Gi
+            limits:
+              memory: 3Gi
+          # TODO readinessProbe : requête HTTP GET sur /api/tags, port http
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: http
+          volumeMounts:
+            - {name: models, mountPath: /root/.ollama}
+      volumes:
+        - name: models
+          persistentVolumeClaim: {claimName: ollama-models}
