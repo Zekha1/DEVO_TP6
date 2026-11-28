@@ -58,15 +58,15 @@ if customer_table is not None:
         f'FROM gold."{customer_table}" '
         f'ORDER BY "{revenue}" DESC LIMIT 10'
     ).fetchall()
-    for customer_name, customer_country, order_count, revenue_eur in customers:
+    for customer_number, (_, customer_country, order_count, revenue_eur) in enumerate(customers, 1):
         docs.append(
-            f"gold.{customer_table} : client {customer_name}, pays {customer_country}, "
+            f"gold.{customer_table} : client #{customer_number}, pays {customer_country}, "
             f"{order_count} commandes, CA {revenue_eur} EUR"
         )
     if customers:
-        customer_name, customer_country, order_count, revenue_eur = customers[0]
+        _, customer_country, order_count, revenue_eur = customers[0]
         docs.append(
-            f"Meilleur client : {customer_name}, pays {customer_country}, "
+            f"Meilleur client : client #1, pays {customer_country}, "
             f"{order_count} commandes, CA {revenue_eur} EUR"
         )
 # TODO : une phrase par ligne de quality_report.csv
