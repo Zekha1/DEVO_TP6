@@ -20,3 +20,14 @@ Comme le tarif diffère entre l'entrée et la sortie, je suppose pour simplifier
 Je sais également que Oracle propose des VM gratuitment mais celle-ci sont probablement pas assez puissantes (2 CPU seulement par exemple).
 
 Sources tarifaires du le 28 novembre 2026 : [tarifs API OpenAI](https://developers.openai.com/api/docs/pricing) et [tarifs Hetzner Cloud](https://www.hetzner.com/cloud/).
+
+## Evals
+
+J'ai lancé l'évaluation trois fois avec temperature=0, puis changé une seule chose dans la récupération : lorsqu'une question contient une date complète en français, l'assistant utilise uniquement le chunk de cette date au lieu de le mélanger avec les jours voisins. Avant, le modèle confondait les commandes du 14 novembre (4) avec celles du meilleur jour (7), car plusieurs dates et nombres apparaissaient dans le contexte.
+
+| Version | Run 1 | Run 2 | Run 3 | Moyenne |
+|---|---:|---:|---:|---:|
+| Avant : récupération cosinus seule | 9/10 (90 %) | 9/10 (90 %) | 9/10 (90 %) | 90 % |
+| Après : priorité exclusive à la date exacte | 10/10 (100 %) | 10/10 (100 %) | 10/10 (100 %) | 100 % |
+
+Le score est stable dans les deux séries. L'amélioration est de 10 points sur ce jeu de dix questions ; elle montre surtout que réduire les passages numériques contradictoires aide ce petit modèle à répondre aux questions datées. Les réponses sont bonnes car il n'y a pas énormément de données dans le jeu de base.

@@ -1,0 +1,20 @@
+- question: "Quel a été le meilleur jour de ventes ?"
+  must_contain: ["2025-11-21", "487.20"]
+- question: "Quelle somme correspond au chiffre d'affaires total ?"
+  must_contain: ["1519.00"]
+- question: "Quel chiffre d'affaires a été réalisé le 8 novembre 2025 ?"
+  must_contain: ["325.00"]
+- question: "Combien de commandes ont été passées le 14 novembre 2025 ?"
+  must_contain: ["4 commande"]
+- question: "Quel est le montant des ventes le 27 novembre ?"
+  must_contain: ["302.40"]
+- question: "Qui est le meilleur client ?"
+  must_contain: ["Camille Martin"]
+- question: "Dans quel pays se trouve le meilleur client ?"
+  must_contain: ["FR"]
+- question: "Combien de commandes a passé Camille Martin ?"
+  must_contain: ["6"]
+- question: "Quel temps fera-t-il demain ?"
+  must_contain: ["Je ne sais pas"]
+- question: "Quel est le prix du bitcoin aujourd'hui ?"
+  must_contain: ["Je ne sais pas"]
